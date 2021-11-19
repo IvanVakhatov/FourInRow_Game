@@ -60,6 +60,7 @@ def run_game(is_first_game):
 
         # Прорисовка игрового поля
         draw_board(main_board)
+        draw_tokens(main_board)
         # Обновление экрана
         pygame.display.update()
         # Установка значения частоты обновления экрана
@@ -95,6 +96,22 @@ def draw_board(board):
             item_rect.topleft = (X_ALIGNMENT + (x * ITEMSIZE),
                                  Y_ALIGNMENT + (y * ITEMSIZE))
             DISPLAYSURF.blit(BOARDIMAGE, item_rect)
+
+
+def draw_tokens(board):
+    ''' Отображение игровых фишек на экране '''
+
+    # Вычисление координат положения для отображения красной фишки
+    red_token_rect = pygame.Rect(ITEMSIZE // 2, WINDOWHEIGHT -
+                                 int(3 * ITEMSIZE / 2),
+                                 ITEMSIZE, ITEMSIZE)
+    # Вычисление координат положения для отображения желтой фишки
+    yellow_token_rect = pygame.Rect(WINDOWWIDTH - (3 * ITEMSIZE // 2),
+                                    WINDOWHEIGHT - (3 * ITEMSIZE // 2),
+                                    ITEMSIZE, ITEMSIZE)
+    # Отображение фишек на экран
+    DISPLAYSURF.blit(REDTOKENIMAGE, red_token_rect)
+    DISPLAYSURF.blit(YELLOWTOKENIMAGE, yellow_token_rect)
 
 
 if __name__ == '__main__':
