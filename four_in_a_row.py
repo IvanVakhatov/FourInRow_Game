@@ -5,7 +5,7 @@ from pygame.locals import *
 
 FPS = 30  # FPS - частота обонвления экрана в игре
 WINDOWWIDTH = 1100  # Ширина окна программы (в пикселях)
-WINDOWHEIGHT = 900  # Высота окна программы (в пикселях)
+WINDOWHEIGHT = 700  # Высота окна программы (в пикселях)
 
 BOARDWIDTH = 7  # Число игровых ячеек по вертикали
 BOARDHEIGHT = 6  # Число игровых ячеек по горизонтали
@@ -70,7 +70,6 @@ def run_game(is_first_game):
     while True:
         ''' Основной игровой цикл '''
         get_user_move(main_board)
-        break
 
     while True:
         #Пока игрок не выйдет из игры (закрыв окно)
@@ -106,6 +105,17 @@ def draw_game_field(board, extra_token=None):
     DISPLAYSURF.fill(BGCOLOR)
     item_rect = pygame.Rect(0, 0, ITEMSIZE, ITEMSIZE)
 
+    # Прориосвка уже "сыгранных" фишек на экране
+    for x in range(BOARDWIDTH):
+        for y in range(BOARDHEIGHT):
+            # Изменение верхней левой координаты объекта item_rect
+            item_rect.topleft = (X_ALIGNMENT + (x * ITEMSIZE),
+                                 Y_ALIGNMENT + (y * ITEMSIZE))
+            if board[x][y] == RED:
+                DISPLAYSURF.blit(REDTOKENIMAGE, item_rect)
+            elif board[x][y] == YELLOW:
+                DISPLAYSURF.blit(YELLOWTOKENIMAGE, item_rect)
+
     if extra_token is not None:
         draw_extra_token(board, extra_token)
 
@@ -117,16 +127,19 @@ def draw_game_field(board, extra_token=None):
                                  Y_ALIGNMENT + (y * ITEMSIZE))
             DISPLAYSURF.blit(BOARDIMAGE, item_rect)
 
-    # Отображение фишек на экран
+    # Отображение спрайтов игровых фишек на экране (по бокам)
     DISPLAYSURF.blit(REDTOKENIMAGE, REDTOKENRECT)
     DISPLAYSURF.blit(YELLOWTOKENIMAGE, YELLOWTOKENRECT)
 
 
 def draw_extra_token(board, extra_token):
     ''' Прорисовка пути новой фишки '''
+
+    # Извлечение параметров фишки (координаты и цвет)
     x_cord = extra_token[0]
     y_cord = extra_token[1]
     color = extra_token[2]
+
     if color == RED:
         DISPLAYSURF.blit(REDTOKENIMAGE, (x_cord, y_cord, ITEMSIZE, ITEMSIZE))
     elif color == YELLOW:
@@ -170,9 +183,14 @@ def get_user_move(board):
                     column = int((token_x - X_ALIGNMENT) / ITEMSIZE)
                     #Если есть свободное место в колонке
                     if is_empty_space(board, column):
+                        # Плавная прорисовка траектории падения фишки
+                        animated_drop(board, column, RED)
+                        # Занесение упавшей фишки в массив игрового поля
+                        board[column][get_lowest_pos(board, column)] = RED
+                        # Отображение только что упавшей фишки на
+                        # uгровом поле (ход сделан)
                         draw_game_field(board)
                         pygame.display.update()
-                        return
 
                 token_x, token_y = None, None
                 move_token = False
@@ -194,6 +212,41 @@ def is_empty_space(board, column):
         # Если больше ширины доски или колонка заполнена
         return False
     return True
+
+
+def animated_drop(board, column, color):
+    ''' Плавная анимация траектории падения игровой фишки'''
+
+    # Рассчет стартовой координаты Х (столбца на поле)
+    x_cord = X_ALIGNMENT + column * ITEMSIZE
+    # Начинать падение с верхней игровой ячейки
+    y_cord = Y_ALIGNMENT - ITEMSIZE
+    # Начальная скорость падения фишки
+    speed_drop = 25
+    # Параметр увеличения скорости
+    speed_incr = 3
+    # Рассчет конечной координаты Y (последней свободной ячейки в стоблце)
+    lowest_pos = get_lowest_pos(board, column) - 1
+
+    # Пока не достигнуто конечной свободной ячейки
+    while ((y_cord - Y_ALIGNMENT) / ITEMSIZE) <= lowest_pos:
+        y_cord += speed_drop
+        speed_drop += speed_incr
+        # Отображение падающей фишки на игровой доске
+        draw_game_field(board, [x_cord, y_cord, RED])
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+
+def get_lowest_pos(board, column):
+    ''' Нахождение номера свободной ячейки на игровой доске'''
+
+    # Начинаем проверять с конца списка ячеек в колонке
+    for number in range(BOARDHEIGHT - 1, -1, -1):
+        #Если найдена пустая ячейка в колонке, то возвращаем ее номер
+        if board[column][number] == VOID:
+            return number
+    return -1
 
 
 if __name__ == '__main__':
