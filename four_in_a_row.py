@@ -2,15 +2,13 @@ import sys
 import pygame
 from pygame.locals import *
 
-
-FPS = 30  # FPS - частота обонвления экрана в игре
+FPS = 15  # FPS - частота обновления экрана в игре
 WINDOWWIDTH = 1100  # Ширина окна программы (в пикселях)
-WINDOWHEIGHT = 700  # Высота окна программы (в пикселях)
+WINDOWHEIGHT = 900  # Высота окна программы (в пикселях)
 
 BOARDWIDTH = 7  # Число игровых ячеек по вертикали
 BOARDHEIGHT = 6  # Число игровых ячеек по горизонтали
 
-DIFFICULTY = 2  # "Уровень сложности" бота (1 или 2)
 ITEMSIZE = 100  # Размер фишек и игровых ячеек
 
 # Выравнивание игрового поля относительно оси Х
@@ -18,25 +16,34 @@ X_ALIGNMENT = int((WINDOWWIDTH - BOARDWIDTH * ITEMSIZE) / 2)
 # Выравнивание игрового поля относительно оси Y
 Y_ALIGNMENT = int((WINDOWHEIGHT - BOARDHEIGHT * ITEMSIZE) / 2)
 
-BGCOLOR = (159, 111, 66)  # Фон игровго поля - светло-коричневый
+BGCOLOR = (159, 111, 66)  # Фон игрового поля - светло-коричневый
 TEXTCOLOR = (255, 255, 255)  # Белый цвет
 VOID = ' '
 RED = 'red'
 YELLOW = 'yellow'
+USER = 'user'
+BOT = 'bot'
 
 
 def main():
-    global FPSCLOCK, DISPLAYSURF
+    global FPSCLOCK, DISPLAYSURF, TOKENSOUND, USERWINSOUND
     global REDTOKENIMAGE, YELLOWTOKENIMAGE, BOARDIMAGE
-    global REDTOKENRECT, YELLOWTOKENRECT
+    global USERWINIMAGE, BOTWINIMAGE
+    global REDTOKENRECT, YELLOWTOKENRECT, WINRECT
 
     # Инициализация всех подключенных модулей библиотеки pygame
     pygame.init()
     # Создание объекта Clock (для контроля FPS)
     FPSCLOCK = pygame.time.Clock()
-    # Инициализция окна
+    # Инициализация окна
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
-    pygame.display.set_caption('Четыре в ряд')
+    # Добавление подписи на игровом окне
+    pygame.display.set_caption('Пиратские фишки')
+
+    # Загрузка звука падения фишки
+    TOKENSOUND = pygame.mixer.Sound("drop_sound.wav")
+    # Загрузка звука выигрыша игрока
+    USERWINSOUND = pygame.mixer.Sound("user_wins.wav")
 
     # Загрузка изображения красной фишки
     REDTOKENIMAGE = pygame.image.load('red_cell.png')
@@ -44,6 +51,17 @@ def main():
     YELLOWTOKENIMAGE = pygame.image.load('yellow_cell.png')
     # Загрузка изображения ячейки игровой доски
     BOARDIMAGE = pygame.image.load('board.png')
+    # Загрузка изображения выигрыша игрока
+    USERWINIMAGE = pygame.image.load('user_win.png')
+    # Трансформирование изображения под размер экрана
+    USERWINIMAGE = pygame.transform.smoothscale(USERWINIMAGE,
+                                               (WINDOWWIDTH, WINDOWHEIGHT))
+     # Загрузка изображения выигрыша компьютера
+    BOTWINIMAGE = pygame.image.load('bot_win.png')
+    # Трансформирование изображения под размер экрана
+    BOTWINIMAGE = pygame.transform.smoothscale(BOTWINIMAGE,
+                                               (WINDOWWIDTH, WINDOWHEIGHT))
+
     # Координаты положения красной фишки
     REDTOKENRECT = pygame.Rect(ITEMSIZE // 2, WINDOWHEIGHT -
                                int(3 * ITEMSIZE / 2),
@@ -52,11 +70,14 @@ def main():
     YELLOWTOKENRECT = pygame.Rect(WINDOWWIDTH - (3 * ITEMSIZE // 2),
                                   WINDOWHEIGHT - (3 * ITEMSIZE // 2),
                                   ITEMSIZE, ITEMSIZE)
+    # Координаты положения картинки выигрыша
+    WINRECT = USERWINIMAGE.get_rect()
+    WINRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2)
 
     #Для проверки, запушена первая игра или нет
     is_first_game = True
     while True:
-        # Основной игровой цикл
+        # Цикл запуска игры
         run_game(is_first_game)
         is_first_game = False
 
@@ -64,18 +85,44 @@ def main():
 def run_game(is_first_game):
     ''' Запуск игры '''
 
+    if is_first_game:
+        # Пользователь делает первый ход при первом запуске игры
+        turn = USER
+    else:
+        #Если игра после завершения запущена повторно, то
+        # случайно выберем, кто ходит первым
+        if 1 == 0:
+            turn = BOT
+        else:
+            turn = USER
+
     # Создание массива для "игровой сетки" из ячеек
     main_board = get_new_board()
 
     while True:
         ''' Основной игровой цикл '''
-        get_user_move(main_board)
+        if turn == USER:
+            # Пользователь делает ход
+            get_user_move(main_board)
+            if is_winner(main_board, RED):
+                win_image = USERWINIMAGE
+                win_sound = USERWINSOUND
+                break
+            turn = USER
 
+    sound_flag = True
     while True:
         #Пока игрок не выйдет из игры (закрыв окно)
 
         # Прорисовка игрового поля
         draw_game_field(main_board)
+        # Изображение выигрыша игрока или компьютера
+        DISPLAYSURF.blit(win_image, WINRECT)
+        if sound_flag is True:
+            # Включение звука выигрыша игрока
+            pygame.mixer.Sound.play(win_sound)
+            pygame.mixer.music.stop()
+            sound_flag = False
         # Обновление экрана
         pygame.display.update()
         # Установка значения частоты обновления экрана
@@ -88,6 +135,8 @@ def run_game(is_first_game):
                 # Закрытие окна и завершение программы
                 pygame.quit()
                 sys.exit()
+            elif event.type == MOUSEBUTTONUP:
+                return
 
 
 def get_new_board():
@@ -105,7 +154,7 @@ def draw_game_field(board, extra_token=None):
     DISPLAYSURF.fill(BGCOLOR)
     item_rect = pygame.Rect(0, 0, ITEMSIZE, ITEMSIZE)
 
-    # Прориосвка уже "сыгранных" фишек на экране
+    # Прорисовка уже "сыгранных" фишек на экране
     for x in range(BOARDWIDTH):
         for y in range(BOARDHEIGHT):
             # Изменение верхней левой координаты объекта item_rect
@@ -119,7 +168,7 @@ def draw_game_field(board, extra_token=None):
     if extra_token is not None:
         draw_extra_token(board, extra_token)
 
-    # Прориосвка игрового поля на экране
+    # Прорисовка игрового поля на экране
     for x in range(BOARDWIDTH):
         for y in range(BOARDHEIGHT):
             # Изменение верхней левой координаты объекта item_rect
@@ -165,13 +214,13 @@ def get_user_move(board):
                 token_x, token_y = event.pos
                 print(token_x)
 
-            #Если фишка дивижется по полю при помощи мышки
+            # Если фишка движется по полю при помощи мышки
             elif event.type == MOUSEMOTION and move_token:
                 # Обновить координаты перетаскиваемой красной фишки
                 token_x, token_y = event.pos
                 print(token_x)
 
-            # Если красная фишка была отпушена
+            # Если красная фишка была отпущена
             # (левая кнопка мыши отпущена)
             elif (event.type == MOUSEBUTTONUP and event.button == 1 and
                   move_token):
@@ -191,6 +240,7 @@ def get_user_move(board):
                         # uгровом поле (ход сделан)
                         draw_game_field(board)
                         pygame.display.update()
+                        return
 
                 token_x, token_y = None, None
                 move_token = False
@@ -202,7 +252,7 @@ def get_user_move(board):
             draw_game_field(board)
 
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        FPSCLOCK.tick()
 
 
 def is_empty_space(board, column):
@@ -224,10 +274,11 @@ def animated_drop(board, column, color):
     # Начальная скорость падения фишки
     speed_drop = 25
     # Параметр увеличения скорости
-    speed_incr = 3
-    # Рассчет конечной координаты Y (последней свободной ячейки в стоблце)
+    speed_incr = 5
+    # Рассчет конечной координаты Y (последней свободной ячейки в столбце)
     lowest_pos = get_lowest_pos(board, column) - 1
 
+    pygame.mixer.Sound.play(TOKENSOUND)
     # Пока не достигнуто конечной свободной ячейки
     while ((y_cord - Y_ALIGNMENT) / ITEMSIZE) <= lowest_pos:
         y_cord += speed_drop
@@ -235,7 +286,8 @@ def animated_drop(board, column, color):
         # Отображение падающей фишки на игровой доске
         draw_game_field(board, [x_cord, y_cord, RED])
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        FPSCLOCK.tick()
+    pygame.mixer.music.stop()
 
 
 def get_lowest_pos(board, column):
@@ -243,10 +295,56 @@ def get_lowest_pos(board, column):
 
     # Начинаем проверять с конца списка ячеек в колонке
     for number in range(BOARDHEIGHT - 1, -1, -1):
-        #Если найдена пустая ячейка в колонке, то возвращаем ее номер
+        # Если найдена пустая ячейка в колонке, то возвращаем ее номер
         if board[column][number] == VOID:
             return number
     return -1
+
+
+def is_board_full(board):
+    ''' Возвращает True, если все ячейки на доске заполнены
+        Иначе - возвращает False'''
+    for x in range(BOARDWIDTH):
+        for y in range(BOARDHEIGHT):
+            if board[x][y] == VOID:
+                return False
+    return True
+
+
+def is_winner(board, color):
+    # Проверка горизонтальных "линий" на поле
+    for x in range(BOARDWIDTH - 3):
+        for y in range(BOARDHEIGHT):
+            if ((board[x][y] == color) and
+               (board[x+1][y] == color) and
+               (board[x+2][y] == color) and
+               (board[x+3][y] == color)):
+                    return True
+    # Проверка вертикальных "линий" на поле
+    for x in range(BOARDWIDTH):
+        for y in range(BOARDHEIGHT - 3):
+            if ((board[x][y] == color) and
+               (board[x][y+1] == color) and
+               (board[x][y+2] == color) and
+               (board[x][y+3] == color)):
+                    return True
+    # Проверка диагоналей на поле, наклоненных вправо
+    for x in range(BOARDWIDTH - 3):
+        for y in range(3, BOARDHEIGHT):
+            if ((board[x][y] == color) and
+               (board[x+1][y-1] == color) and
+               (board[x+2][y-2] == color) and
+               (board[x+3][y-3] == color)):
+                    return True
+    # Проверка диагоналей на поле, наклоненных влево
+    for x in range(BOARDWIDTH - 3):
+        for y in range(BOARDHEIGHT - 3):
+            if ((board[x][y] == color) and
+               (board[x+1][y+1] == color) and
+               (board[x+2][y+2] == color) and
+               (board[x+3][y+3] == color)):
+                    return True
+    return False
 
 
 if __name__ == '__main__':
