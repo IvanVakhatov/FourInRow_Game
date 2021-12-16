@@ -31,11 +31,13 @@ BOT = 'bot'
 
 def main():
     # Объявление глобальных переменных
-    global FPSCLOCK, DISPLAYSURF
+    global FPSCLOCK, DISPLAYSURF, IFBGSOUND
     global BGSOUND, TOKENSOUND, USERWINSOUND, USERLOSESOUND, DRAWNGAMESOUND
     global REDTOKENIMAGE, YELLOWTOKENIMAGE, BOARDIMAGE
     global USERWINIMAGE, BOTWINIMAGE, DRAWNGAMEIMAGE
-    global REDTOKENRECT, YELLOWTOKENRECT, WINRECT
+    global PLAYBTN, EXITBTN, MUTEBTN, SOUNDONBTN
+    global REDTOKENRECT, YELLOWTOKENRECT, WINRECT, PLAYBTNRECT
+    global EXITBTNRECT, MUTEBTNRECT, SOUNDONBTNRECT
 
     # Инициализация всех подключенных модулей библиотеки pygame
     pygame.init()
@@ -75,11 +77,36 @@ def main():
     # Трансформирование изображения под размер экрана
     BOTWINIMAGE = pygame.transform.smoothscale(BOTWINIMAGE,
                                                (WINDOWWIDTH, WINDOWHEIGHT))
-    # Загрузка изображения ничьи
+    # Загрузка изображения ничьей
     DRAWNGAMEIMAGE = pygame.image.load('drawn_game.png')
     # Трансформирование изображения под размер экрана
     DRAWNGAMEIMAGE = pygame.transform.smoothscale(BOTWINIMAGE,
                                                  (WINDOWWIDTH, WINDOWHEIGHT))
+
+
+     # Загрузка изображения кнопки начала игры
+    PLAYBTN = pygame.image.load('play_btn.png')
+    # Трансформирование изображения
+    height_btn = PLAYBTN.get_height()
+    PLAYBTN = pygame.transform.smoothscale(PLAYBTN, (ITEMSIZE * 3, height_btn))
+     # Загрузка изображения кнопки начала игры
+    EXITBTN = pygame.image.load('exit_btn.png')
+    # Трансформирование изображения
+    height_btn = EXITBTN.get_height()
+    EXITBTN = pygame.transform.smoothscale(EXITBTN, (ITEMSIZE * 3, height_btn))
+    # Загрузка изображения кнопки включения фонового звука
+    MUTEBTN = pygame.image.load('mute_btn.png')
+    # Трансформирование изображения
+    width_btn = MUTEBTN.get_width()
+    height_btn = MUTEBTN.get_height()
+    MUTEBTN = pygame.transform.smoothscale(MUTEBTN, (width_btn, height_btn))
+    # Загрузка изображения кнопки выключения фонового звука
+    SOUNDONBTN = pygame.image.load('sound_on_btn.png')
+    # Трансформирование изображения
+    width_btn = SOUNDONBTN.get_width()
+    height_btn = SOUNDONBTN.get_height()
+    SOUNDONBTN = pygame.transform.smoothscale(SOUNDONBTN,
+                                             (width_btn, height_btn))
 
     # Координаты положения красной фишки
     REDTOKENRECT = pygame.Rect(ITEMSIZE // 2, WINDOWHEIGHT -
@@ -92,15 +119,89 @@ def main():
     # Координаты положения картинки выигрыша
     WINRECT = USERWINIMAGE.get_rect()
     WINRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2)
+    # Координаты положения кнопки "Играть"
+    PLAYBTNRECT = PLAYBTN.get_rect()
+    PLAYBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 200)
+    # Координаты положения кнопки "Выйти"
+    EXITBTNRECT = EXITBTN.get_rect()
+    EXITBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 50)
+    # Координаты положения кнопки "Без звука"
+    MUTEBTNRECT = MUTEBTN.get_rect()
+    MUTEBTNRECT.center = (WINDOWWIDTH // 2 - 80, WINDOWHEIGHT // 2 + 100)
+    # Координаты положения кнопки "Включить фоновый звук"
+    SOUNDONBTNRECT = SOUNDONBTN.get_rect()
+    SOUNDONBTNRECT.center = (WINDOWWIDTH // 2 + 80, WINDOWHEIGHT // 2 + 100)
 
     # Для проверки, игра запущена в первый раз или нет
     is_first_game = True
+    # Будет ли фоновый звук включен?
+    IFBGSOUND = startup_window()
+    # Ожидаем, пока игрок нажмет кнопку "Играть"
+    startup_window()
     while True:
         # Включение фоновой музыки
-        pygame.mixer.music.play(loops=-1)
+        if IFBGSOUND is True:
+            pygame.mixer.music.play(loops=-1)
+        else:
+            pygame.mixer.music.stop()
         # Запуск игры
         run_game(is_first_game)
         is_first_game = False
+
+
+def startup_window():
+    ''' Отображение начального окна с кнопками и обработка их нажатий'''
+    bg_sound = False
+    action = False
+    while True:
+        DISPLAYSURF.fill(BGCOLOR)
+
+        for event in pygame.event.get():
+            # Если нажат "крестик" на окне pygame
+            if event.type == QUIT:
+                # Закрыть окно pygame и завершить программу
+                pygame.quit()
+                sys.exit()
+
+            # Если нажата левая кнопка мыши и курсор "находится" внутри
+            # области кнопки "Играть"
+            elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
+                  not action and PLAYBTNRECT.collidepoint(event.pos)):
+                action = True
+                return
+
+            # Если нажата левая кнопка мыши и курсор "находится" внутри
+            # области кнопки "Выйти"
+            elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
+                  not action and EXITBTNRECT.collidepoint(event.pos)):
+                action = False
+                pygame.quit()
+                sys.exit()
+                return
+
+            # Если нажата левая кнопка мыши и курсор "находится" внутри
+            # области кнопки "Выключить фоновый звук"
+            elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
+                  not action and MUTEBTNRECT.collidepoint(event.pos)):
+                bg_sound = False
+                action = True
+                return bg_sound
+
+            # Если нажата левая кнопка мыши и курсор "находится" внутри
+            # области кнопки "Включить фоновый звук"
+            elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
+                  not action and SOUNDONBTNRECT.collidepoint(event.pos)):
+                bg_sound = True
+                action = True
+                return bg_sound
+
+        # Отображение кнопок на экране
+        DISPLAYSURF.blit(PLAYBTN, PLAYBTNRECT)
+        DISPLAYSURF.blit(EXITBTN, EXITBTNRECT)
+        DISPLAYSURF.blit(MUTEBTN, MUTEBTNRECT)
+        DISPLAYSURF.blit(SOUNDONBTN, SOUNDONBTNRECT)
+        pygame.display.update()
+        FPSCLOCK.tick()
 
 
 def run_game(is_first_game):
