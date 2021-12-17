@@ -4,7 +4,6 @@ import copy
 import pygame
 from pygame.locals import *
 
-FPS = 15  # FPS - частота обновления экрана в игре
 WINDOWWIDTH = 1100  # Ширина окна программы (в пикселях)
 WINDOWHEIGHT = 900  # Высота окна программы (в пикселях)
 
@@ -19,7 +18,6 @@ X_ALIGNMENT = (WINDOWWIDTH - BOARDWIDTH * ITEMSIZE) // 2
 Y_ALIGNMENT = (WINDOWHEIGHT - BOARDHEIGHT * ITEMSIZE) // 2
 
 BGCOLOR = (159, 111, 66)  # Фон игрового поля - светло-коричневый
-TEXTCOLOR = (255, 255, 255)  # Белый цвет
 
 # Объявление основных игровых констант
 VOID = ' '
@@ -34,9 +32,9 @@ def main():
     global FPSCLOCK, DISPLAYSURF, IFBGSOUND
     global BGSOUND, TOKENSOUND, USERWINSOUND, USERLOSESOUND, DRAWNGAMESOUND
     global REDTOKENIMAGE, YELLOWTOKENIMAGE, BOARDIMAGE
-    global USERWINIMAGE, BOTWINIMAGE, DRAWNGAMEIMAGE
+    global USERWINIMAGE, BOTWINIMAGE, DRAWNGAMEIMAGE, NAMEIMAGE
     global PLAYBTN, EXITBTN, MUTEBTN, SOUNDONBTN
-    global REDTOKENRECT, YELLOWTOKENRECT, WINRECT, PLAYBTNRECT
+    global REDTOKENRECT, YELLOWTOKENRECT, WINRECT, PLAYBTNRECT, NAMERECT
     global EXITBTNRECT, MUTEBTNRECT, SOUNDONBTNRECT
 
     # Инициализация всех подключенных модулей библиотеки pygame
@@ -83,7 +81,13 @@ def main():
     DRAWNGAMEIMAGE = pygame.transform.smoothscale(BOTWINIMAGE,
                                                  (WINDOWWIDTH, WINDOWHEIGHT))
 
-
+    # Загрузка изображения надписи
+    NAMEIMAGE = pygame.image.load('greeting.png')
+    # Трансформирование изображения
+    width_img = NAMEIMAGE.get_width()
+    height_img = NAMEIMAGE.get_height()
+    NAMEIMAGE = pygame.transform.smoothscale(NAMEIMAGE, (width_img - 100,
+                                                         height_img))
      # Загрузка изображения кнопки начала игры
     PLAYBTN = pygame.image.load('play_btn.png')
     # Трансформирование изображения
@@ -119,42 +123,54 @@ def main():
     # Координаты положения картинки выигрыша
     WINRECT = USERWINIMAGE.get_rect()
     WINRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2)
+    # Координаты положения картинки названия
+    NAMERECT = NAMEIMAGE.get_rect()
+    NAMERECT.center = (WINDOWWIDTH // 2, 130)
     # Координаты положения кнопки "Играть"
     PLAYBTNRECT = PLAYBTN.get_rect()
-    PLAYBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 200)
+    PLAYBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 100)
     # Координаты положения кнопки "Выйти"
     EXITBTNRECT = EXITBTN.get_rect()
-    EXITBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 50)
+    EXITBTNRECT.center = (WINDOWWIDTH // 2, WINDOWHEIGHT // 2 + 50)
     # Координаты положения кнопки "Без звука"
     MUTEBTNRECT = MUTEBTN.get_rect()
-    MUTEBTNRECT.center = (WINDOWWIDTH // 2 - 80, WINDOWHEIGHT // 2 + 100)
+    MUTEBTNRECT.center = (WINDOWWIDTH // 2 - 80, WINDOWHEIGHT // 2 + 200)
     # Координаты положения кнопки "Включить фоновый звук"
     SOUNDONBTNRECT = SOUNDONBTN.get_rect()
-    SOUNDONBTNRECT.center = (WINDOWWIDTH // 2 + 80, WINDOWHEIGHT // 2 + 100)
+    SOUNDONBTNRECT.center = (WINDOWWIDTH // 2 + 80, WINDOWHEIGHT // 2 + 200)
 
     # Для проверки, игра запущена в первый раз или нет
     is_first_game = True
-    # Будет ли фоновый звук включен?
-    IFBGSOUND = startup_window()
-    # Ожидаем, пока игрок нажмет кнопку "Играть"
-    startup_window()
     while True:
+        # Будет ли фоновый звук включен?
+        IFBGSOUND = startup_window()
+        # Ожидаем, пока игрок нажмет кнопку "Играть"
+        startup_window()
         # Включение фоновой музыки
         if IFBGSOUND is True:
             pygame.mixer.music.play(loops=-1)
-        else:
-            pygame.mixer.music.stop()
         # Запуск игры
         run_game(is_first_game)
         is_first_game = False
 
 
 def startup_window():
-    ''' Отображение начального окна с кнопками и обработка их нажатий'''
+    ''' Отображение начального окна с кнопками и обработка их нажатий '''
     bg_sound = False
     action = False
     while True:
+        # Заливка всего экрана цветом BGCOLOR
         DISPLAYSURF.fill(BGCOLOR)
+
+        # Отображение надписи и кнопок на экран
+        DISPLAYSURF.blit(NAMEIMAGE, NAMERECT)
+        DISPLAYSURF.blit(PLAYBTN, PLAYBTNRECT)
+        DISPLAYSURF.blit(EXITBTN, EXITBTNRECT)
+        DISPLAYSURF.blit(MUTEBTN, MUTEBTNRECT)
+        DISPLAYSURF.blit(SOUNDONBTN, SOUNDONBTNRECT)
+        # Обновление экрана
+        pygame.display.update()
+        FPSCLOCK.tick()
 
         for event in pygame.event.get():
             # Если нажат "крестик" на окне pygame
@@ -184,7 +200,7 @@ def startup_window():
             elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
                   not action and MUTEBTNRECT.collidepoint(event.pos)):
                 bg_sound = False
-                action = True
+                action = False
                 return bg_sound
 
             # Если нажата левая кнопка мыши и курсор "находится" внутри
@@ -192,16 +208,8 @@ def startup_window():
             elif (event.type == MOUSEBUTTONDOWN and event.button == 1 and
                   not action and SOUNDONBTNRECT.collidepoint(event.pos)):
                 bg_sound = True
-                action = True
+                action = False
                 return bg_sound
-
-        # Отображение кнопок на экране
-        DISPLAYSURF.blit(PLAYBTN, PLAYBTNRECT)
-        DISPLAYSURF.blit(EXITBTN, EXITBTNRECT)
-        DISPLAYSURF.blit(MUTEBTN, MUTEBTNRECT)
-        DISPLAYSURF.blit(SOUNDONBTN, SOUNDONBTNRECT)
-        pygame.display.update()
-        FPSCLOCK.tick()
 
 
 def run_game(is_first_game):
@@ -276,8 +284,7 @@ def run_game(is_first_game):
             sound_flag = False
         # Обновление экрана
         pygame.display.update()
-        # Установка значения частоты обновления экрана
-        FPSCLOCK.tick(FPS)
+        FPSCLOCK.tick()
         # Обработка событий (нажатий)
         for event in pygame.event.get():
             # Если нажата кнопка закрытия окна или клавиша "Escape"
@@ -462,7 +469,7 @@ def animated_bot_drop(board, column):
     speed_drop = 2
     # Параметр увеличения скорости
     speed_incr = 1
-    # moving the yellow tile up
+    # Перемещаем желтую фишку вверх
     while y_cord - 25 > (Y_ALIGNMENT - ITEMSIZE):
         y_cord -= speed_drop
         speed_drop += speed_incr
@@ -470,7 +477,7 @@ def animated_bot_drop(board, column):
         pygame.display.update()
         FPSCLOCK.tick()
 
-    # moving the yellow tile over
+    # Двигаем желтую фишку влево
     y_cord = Y_ALIGNMENT - ITEMSIZE
     # Начальная скорость падения фишки
     speed_drop = 2
@@ -483,7 +490,7 @@ def animated_bot_drop(board, column):
         pygame.display.update()
         FPSCLOCK.tick()
 
-    # dropping the yellow tile
+    # Опускаем желтую фишку в ячейку в колонке
     animated_drop(board, column, YELLOW)
 
 
@@ -541,7 +548,7 @@ def get_bot_move(board):
 
 
 def get_estimated_moves(board, token):
-    ''' Создание списка оценок для потенциальных следующих ходов бота '''
+    ''' Создание списка оценок потенциальных следующих ходов бота '''
 
     # Противник - красная фишка
     enemy_token = RED
